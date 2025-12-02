@@ -86,10 +86,12 @@ public:
    * All following trajectories are then attached to the new trajectory
    * element (until all requests are processed or until the next group change).
    *
-   * @param planning_scene The planning scene to be used for trajectory
-   * generation.
-   * @param req_list List of motion requests containing: PTP, LIN, CIRC
-   * and/or gripper commands.
+   * @param planning_scene The planning scene to be used for trajectory generation.
+   * @param planning_pipeline The planning pipeline to be used for all sequence items. 
+   * @param req_list List of motion requests containing: planning requests 
+   * with any planning pipeline and planner, and/or gripper commands.
+   * For example PILZ pipeline can use PTP, LIN, CIRC.
+   * 
    * Please note: A request is only valid if:
    *    - All blending radii are non negative.
    *    - The blending radius of the last request is 0.
@@ -106,6 +108,44 @@ public:
    */
   RobotTrajCont solve(const planning_scene::PlanningSceneConstPtr& planning_scene,
                       const planning_pipeline::PlanningPipelinePtr& planning_pipeline,
+                      const moveit_msgs::msg::MotionSequenceRequest& req_list);
+
+ /**
+   * @brief Generates trajectories for the specified list of motion commands.
+   *
+   * The following rules apply:
+   * - If two consecutive trajectories are from the same group, they are
+   * simply attached to each other, given that the blend_radius is zero.
+   * - If two consecutive trajectories are from the same group, they are
+   * blended together, given that the blend_radius is GREATER than zero.
+   * - If two consecutive trajectories are from different groups, then
+   * the second trajectory is added as new element to the result container.
+   * All following trajectories are then attached to the new trajectory
+   * element (until all requests are processed or until the next group change).
+   *
+   * @param planning_scene The planning scene to be used for trajectory generation.
+   * @param planning_pipelines A vector containing the planning pipeline
+   * per sequence item to be used for trajectory generation. 
+   * @param req_list List of motion requests containing: planning requests 
+   * with any planning pipeline and planner, and/or gripper commands.
+   * For example PILZ pipeline can use PTP, LIN, CIRC.
+   * 
+   * Please note: A request is only valid if:
+   *    - All blending radii are non negative.
+   *    - The blending radius of the last request is 0.
+   *    - Only the first request of each group has a start state.
+   *    - None of the blending radii overlap with each other.
+   *
+   * Please note:
+   * Starts states do not need to state the joints of all groups.
+   * It is sufficient if a start state states only the joints of the group
+   * which it belongs to. Starts states can even be incomplete. In this case
+   * default values are set for the unset joints.
+   *
+   * @return Contains the calculated/generated trajectories.
+   */
+  RobotTrajCont solve(const planning_scene::PlanningSceneConstPtr& planning_scene,
+                      const std::vector<planning_pipeline::PlanningPipelinePtr>& planning_pipelines,
                       const moveit_msgs::msg::MotionSequenceRequest& req_list);
 
 private:
@@ -129,12 +169,13 @@ private:
    *
    * @param planning_scene The planning_scene to be used for trajectory
    * generation.
+   * @param planning_pipelines The vector of planning pipelines to be used for
+   * each individual sequence trajectory.
    * @param req_list Container of requests for calculation/generation.
-   *
    * @return Container of generated trajectories.
    */
   MotionResponseCont solveSequenceItems(const planning_scene::PlanningSceneConstPtr& planning_scene,
-                                        const planning_pipeline::PlanningPipelinePtr& planning_pipeline,
+                                        const std::vector<planning_pipeline::PlanningPipelinePtr>& planning_pipelines,
                                         const moveit_msgs::msg::MotionSequenceRequest& req_list) const;
 
   /**

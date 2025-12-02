@@ -88,6 +88,15 @@ RobotTrajCont CommandListManager::solve(const planning_scene::PlanningSceneConst
                                         const planning_pipeline::PlanningPipelinePtr& planning_pipeline,
                                         const moveit_msgs::msg::MotionSequenceRequest& req_list)
 {
+  std::vector<planning_pipeline::PlanningPipelinePtr> planning_pipelines;
+  planning_pipelines.resize(req_list.items.size(), planning_pipeline);
+  return solve(planning_scene, planning_pipelines, req_list);
+}
+
+RobotTrajCont CommandListManager::solve(const planning_scene::PlanningSceneConstPtr& planning_scene,
+                                        const std::vector<planning_pipeline::PlanningPipelinePtr>& planning_pipelines,
+                                        const moveit_msgs::msg::MotionSequenceRequest& req_list)
+{
   if (req_list.items.empty())
   {
     return RobotTrajCont();
@@ -97,7 +106,7 @@ RobotTrajCont CommandListManager::solve(const planning_scene::PlanningSceneConst
   checkLastBlendRadiusZero(req_list);
   checkStartStates(req_list);
 
-  MotionResponseCont resp_cont{ solveSequenceItems(planning_scene, planning_pipeline, req_list) };
+  MotionResponseCont resp_cont{ solveSequenceItems(planning_scene, planning_pipelines, req_list) };
 
   assert(model_);
   RadiiCont radii{ extractBlendRadii(*model_, req_list) };
@@ -236,7 +245,7 @@ CommandListManager::extractBlendRadii(const moveit::core::RobotModel& model,
 
 CommandListManager::MotionResponseCont
 CommandListManager::solveSequenceItems(const planning_scene::PlanningSceneConstPtr& planning_scene,
-                                       const planning_pipeline::PlanningPipelinePtr& planning_pipeline,
+                                       const std::vector<planning_pipeline::PlanningPipelinePtr>& planning_pipelines,
                                        const moveit_msgs::msg::MotionSequenceRequest& req_list) const
 {
   MotionResponseCont motion_plan_responses;
@@ -248,7 +257,7 @@ CommandListManager::solveSequenceItems(const planning_scene::PlanningSceneConstP
     setStartState(motion_plan_responses, req.group_name, req.start_state);
 
     planning_interface::MotionPlanResponse res;
-    if (!planning_pipeline->generatePlan(planning_scene, req, res))
+    if (!planning_pipelines[curr_req_index]->generatePlan(planning_scene, req, res))
     {
       RCLCPP_ERROR(getLogger(), "Generating a plan with planning pipeline failed.");
       res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::FAILURE;
@@ -260,7 +269,8 @@ CommandListManager::solveSequenceItems(const planning_scene::PlanningSceneConstP
       throw PlanningPipelineException(os.str(), res.error_code.val);
     }
     motion_plan_responses.emplace_back(res);
-    RCLCPP_DEBUG_STREAM(getLogger(), "Solved [" << ++curr_req_index << '/' << num_req << ']');
+    ++curr_req_index;
+    RCLCPP_DEBUG_STREAM(getLogger(), "Solved [" << curr_req_index << '/' << num_req << ']');
   }
   return motion_plan_responses;
 }

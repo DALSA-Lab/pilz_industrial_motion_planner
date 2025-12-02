@@ -88,19 +88,25 @@ bool MoveGroupSequenceService::plan(const moveit_msgs::srv::GetMotionSequence::R
   RobotTrajCont traj_vec;
   try
   {
-    // Select planning_pipeline to handle request
-    // All motions in the SequenceRequest need to use the same planning pipeline (but can use different planners)
-    const planning_pipeline::PlanningPipelinePtr planning_pipeline =
-        resolvePlanningPipeline(req->request.items[0].req.pipeline_id);
-    if (!planning_pipeline)
+   // loop over all req items, get pipeline ptr. append to vector
+    std::vector<planning_pipeline::PlanningPipelinePtr> planning_pipelines;
+    planning_pipelines.reserve(req->request.items.size());
+
+    for (auto& req_item : req->request.items)
     {
-      RCLCPP_ERROR_STREAM(getLogger(), "Could not load planning pipeline " << req->request.items[0].req.pipeline_id);
-      res->response.error_code.val = moveit_msgs::msg::MoveItErrorCodes::FAILURE;
-      return false;
+      planning_pipeline::PlanningPipelinePtr planning_pipeline =
+          resolvePlanningPipeline(req_item.req.pipeline_id);
+      if (!planning_pipeline)
+      {
+        RCLCPP_ERROR_STREAM(getLogger(), "Could not load planning pipeline " << req_item.req.pipeline_id);
+        res->response.error_code.val = moveit_msgs::msg::MoveItErrorCodes::FAILURE;
+        return false;
+      }
+      planning_pipelines.push_back(planning_pipeline);
     }
 
     auto scene = context_->planning_scene_monitor_->copyPlanningScene();
-    traj_vec = command_list_manager_->solve(scene, context_->planning_pipeline_, req->request);
+    traj_vec = command_list_manager_->solve(scene, planning_pipelines, req->request);
   }
   catch (const MoveItErrorCodeException& ex)
   {
