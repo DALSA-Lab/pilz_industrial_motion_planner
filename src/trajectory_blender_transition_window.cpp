@@ -43,16 +43,16 @@
 
 namespace
 {
-rclcpp::Logger getLogger()
-{
-  return moveit::getLogger("moveit.planners.pilz.trajectory_blender_transition_window");
-}
-}  // namespace
+  rclcpp::Logger getLogger()
+  {
+    return moveit::getLogger("moveit.planners.pilz.trajectory_blender_transition_window");
+  }
+} // namespace
 
 bool pilz_industrial_motion_planner::TrajectoryBlenderTransitionWindow::blend(
-    const planning_scene::PlanningSceneConstPtr& planning_scene,
-    const pilz_industrial_motion_planner::TrajectoryBlendRequest& req,
-    pilz_industrial_motion_planner::TrajectoryBlendResponse& res)
+    const planning_scene::PlanningSceneConstPtr &planning_scene,
+    const pilz_industrial_motion_planner::TrajectoryBlendRequest &req,
+    pilz_industrial_motion_planner::TrajectoryBlendResponse &res)
 {
   RCLCPP_INFO(getLogger(), "Start trajectory blending using transition window.");
 
@@ -87,7 +87,7 @@ bool pilz_industrial_motion_planner::TrajectoryBlenderTransitionWindow::blend(
 
   // generate the blending trajectory in joint space
   std::map<std::string, double> initial_joint_position, initial_joint_velocity;
-  for (const std::string& joint_name :
+  for (const std::string &joint_name :
        req.first_trajectory->getFirstWayPointPtr()->getJointModelGroup(req.group_name)->getActiveJointModelNames())
   {
     initial_joint_position[joint_name] =
@@ -143,8 +143,8 @@ bool pilz_industrial_motion_planner::TrajectoryBlenderTransitionWindow::blend(
 }
 
 bool pilz_industrial_motion_planner::TrajectoryBlenderTransitionWindow::validateRequest(
-    const pilz_industrial_motion_planner::TrajectoryBlendRequest& req, double& sampling_time,
-    moveit_msgs::msg::MoveItErrorCodes& error_code) const
+    const pilz_industrial_motion_planner::TrajectoryBlendRequest &req, double &sampling_time,
+    moveit_msgs::msg::MoveItErrorCodes &error_code) const
 {
   RCLCPP_DEBUG(getLogger(), "Validate the trajectory blend request.");
 
@@ -187,6 +187,8 @@ bool pilz_industrial_motion_planner::TrajectoryBlenderTransitionWindow::validate
   if (!pilz_industrial_motion_planner::determineAndCheckSamplingTime(req.first_trajectory, req.second_trajectory,
                                                                      EPSILON, sampling_time))
   {
+    RCLCPP_ERROR_STREAM(getLogger(), "The sampling time is not equal between all given points "
+                                     "(except the last two points of each trajectory)");
     error_code.val = moveit_msgs::msg::MoveItErrorCodes::INVALID_MOTION_PLAN;
     return false;
   }
@@ -208,9 +210,9 @@ bool pilz_industrial_motion_planner::TrajectoryBlenderTransitionWindow::validate
 }
 
 void pilz_industrial_motion_planner::TrajectoryBlenderTransitionWindow::blendTrajectoryCartesian(
-    const pilz_industrial_motion_planner::TrajectoryBlendRequest& req, const std::size_t first_interse_index,
+    const pilz_industrial_motion_planner::TrajectoryBlendRequest &req, const std::size_t first_interse_index,
     const std::size_t second_interse_index, const std::size_t blend_align_index, double sampling_time,
-    pilz_industrial_motion_planner::CartesianTrajectory& trajectory) const
+    pilz_industrial_motion_planner::CartesianTrajectory &trajectory) const
 {
   // other fields of the trajectory
   trajectory.group_name = req.group_name;
@@ -266,8 +268,8 @@ void pilz_industrial_motion_planner::TrajectoryBlenderTransitionWindow::blendTra
 }
 
 bool pilz_industrial_motion_planner::TrajectoryBlenderTransitionWindow::searchIntersectionPoints(
-    const pilz_industrial_motion_planner::TrajectoryBlendRequest& req, std::size_t& first_interse_index,
-    std::size_t& second_interse_index) const
+    const pilz_industrial_motion_planner::TrajectoryBlendRequest &req, std::size_t &first_interse_index,
+    std::size_t &second_interse_index) const
 {
   RCLCPP_INFO(getLogger(), "Search for start and end point of blending trajectory.");
 
@@ -296,8 +298,8 @@ bool pilz_industrial_motion_planner::TrajectoryBlenderTransitionWindow::searchIn
 }
 
 void pilz_industrial_motion_planner::TrajectoryBlenderTransitionWindow::determineTrajectoryAlignment(
-    const pilz_industrial_motion_planner::TrajectoryBlendRequest& req, std::size_t first_interse_index,
-    std::size_t second_interse_index, std::size_t& blend_align_index) const
+    const pilz_industrial_motion_planner::TrajectoryBlendRequest &req, std::size_t first_interse_index,
+    std::size_t second_interse_index, std::size_t &blend_align_index) const
 {
   size_t way_point_count_1 = req.first_trajectory->getWayPointCount() - first_interse_index;
   size_t way_point_count_2 = second_interse_index + 1;
