@@ -48,20 +48,20 @@
 
 namespace
 {
-rclcpp::Logger getLogger()
-{
-  return moveit::getLogger("pilz_trajectory_functions");
-}
-}  // namespace
+  rclcpp::Logger getLogger()
+  {
+    return moveit::getLogger("pilz_trajectory_functions");
+  }
+} // namespace
 
-bool pilz_industrial_motion_planner::computePoseIK(const planning_scene::PlanningSceneConstPtr& scene,
-                                                   const std::string& group_name, const std::string& link_name,
-                                                   const Eigen::Isometry3d& pose, const std::string& frame_id,
-                                                   const std::map<std::string, double>& seed,
-                                                   std::map<std::string, double>& solution, bool check_self_collision,
+bool pilz_industrial_motion_planner::computePoseIK(const planning_scene::PlanningSceneConstPtr &scene,
+                                                   const std::string &group_name, const std::string &link_name,
+                                                   const Eigen::Isometry3d &pose, const std::string &frame_id,
+                                                   const std::map<std::string, double> &seed,
+                                                   std::map<std::string, double> &solution, bool check_self_collision,
                                                    const double timeout)
 {
-  const moveit::core::RobotModelConstPtr& robot_model = scene->getRobotModel();
+  const moveit::core::RobotModelConstPtr &robot_model = scene->getRobotModel();
   if (!robot_model->hasJointModelGroup(group_name))
   {
     RCLCPP_ERROR_STREAM(getLogger(), "Robot model has no planning group named as " << group_name);
@@ -75,26 +75,27 @@ bool pilz_industrial_motion_planner::computePoseIK(const planning_scene::Plannin
     return false;
   }
 
-  moveit::core::RobotState rstate{ scene->getCurrentState() };
+  moveit::core::RobotState rstate{scene->getCurrentState()};
   rstate.setVariablePositions(seed);
 
   moveit::core::GroupStateValidityCallbackFn ik_constraint_function;
   if (check_self_collision)
   {
-    ik_constraint_function = [scene](moveit::core::RobotState* robot_state,
-                                     const moveit::core::JointModelGroup* joint_group,
-                                     const double* joint_group_variable_values) {
+    ik_constraint_function = [scene](moveit::core::RobotState *robot_state,
+                                     const moveit::core::JointModelGroup *joint_group,
+                                     const double *joint_group_variable_values)
+    {
       return pilz_industrial_motion_planner::isStateColliding(scene, robot_state, joint_group,
                                                               joint_group_variable_values);
     };
   }
 
   // call ik
-  const moveit::core::JointModelGroup* jmg = robot_model->getJointModelGroup(group_name);
+  const moveit::core::JointModelGroup *jmg = robot_model->getJointModelGroup(group_name);
   if (rstate.setFromIK(jmg, pose, link_name, timeout, ik_constraint_function))
   {
     // copy the solution
-    for (const auto& joint_name : jmg->getActiveJointModelNames())
+    for (const auto &joint_name : jmg->getActiveJointModelNames())
     {
       solution[joint_name] = rstate.getVariablePosition(joint_name);
     }
@@ -109,11 +110,11 @@ bool pilz_industrial_motion_planner::computePoseIK(const planning_scene::Plannin
   }
 }
 
-bool pilz_industrial_motion_planner::computePoseIK(const planning_scene::PlanningSceneConstPtr& scene,
-                                                   const std::string& group_name, const std::string& link_name,
-                                                   const geometry_msgs::msg::Pose& pose, const std::string& frame_id,
-                                                   const std::map<std::string, double>& seed,
-                                                   std::map<std::string, double>& solution, bool check_self_collision,
+bool pilz_industrial_motion_planner::computePoseIK(const planning_scene::PlanningSceneConstPtr &scene,
+                                                   const std::string &group_name, const std::string &link_name,
+                                                   const geometry_msgs::msg::Pose &pose, const std::string &frame_id,
+                                                   const std::map<std::string, double> &seed,
+                                                   std::map<std::string, double> &solution, bool check_self_collision,
                                                    const double timeout)
 {
   Eigen::Isometry3d pose_eigen;
@@ -122,9 +123,9 @@ bool pilz_industrial_motion_planner::computePoseIK(const planning_scene::Plannin
                        timeout);
 }
 
-bool pilz_industrial_motion_planner::computeLinkFK(moveit::core::RobotState& robot_state, const std::string& link_name,
-                                                   const std::map<std::string, double>& joint_state,
-                                                   Eigen::Isometry3d& pose)
+bool pilz_industrial_motion_planner::computeLinkFK(moveit::core::RobotState &robot_state, const std::string &link_name,
+                                                   const std::map<std::string, double> &joint_state,
+                                                   Eigen::Isometry3d &pose)
 {
   // check the reference frame of the target pose
   if (!robot_state.knowsFrameTransform(link_name))
@@ -143,9 +144,9 @@ bool pilz_industrial_motion_planner::computeLinkFK(moveit::core::RobotState& rob
 }
 
 bool pilz_industrial_motion_planner::verifySampleJointLimits(
-    const std::map<std::string, double>& position_last, const std::map<std::string, double>& velocity_last,
-    const std::map<std::string, double>& position_current, double duration_last, double duration_current,
-    const pilz_industrial_motion_planner::JointLimitsContainer& joint_limits)
+    const std::map<std::string, double> &position_last, const std::map<std::string, double> &velocity_last,
+    const std::map<std::string, double> &position_current, double duration_last, double duration_current,
+    const pilz_industrial_motion_planner::JointLimitsContainer &joint_limits)
 {
   const double epsilon = 10e-6;
   if (duration_current <= epsilon)
@@ -156,7 +157,7 @@ bool pilz_industrial_motion_planner::verifySampleJointLimits(
 
   double velocity_current, acceleration_current;
 
-  for (const auto& pos : position_current)
+  for (const auto &pos : position_current)
   {
     velocity_current = (pos.second - position_last.at(pos.first)) / duration_current;
 
@@ -203,21 +204,21 @@ bool pilz_industrial_motion_planner::verifySampleJointLimits(
 }
 
 bool pilz_industrial_motion_planner::generateJointTrajectory(
-    const planning_scene::PlanningSceneConstPtr& scene,
-    const pilz_industrial_motion_planner::JointLimitsContainer& joint_limits, const KDL::Trajectory& trajectory,
-    const std::string& group_name, const std::string& link_name,
-    const std::map<std::string, double>& initial_joint_position, double sampling_time,
-    trajectory_msgs::msg::JointTrajectory& joint_trajectory, moveit_msgs::msg::MoveItErrorCodes& error_code,
+    const planning_scene::PlanningSceneConstPtr &scene,
+    const pilz_industrial_motion_planner::JointLimitsContainer &joint_limits, const KDL::Trajectory &trajectory,
+    const std::string &group_name, const std::string &link_name,
+    const std::map<std::string, double> &initial_joint_position, double sampling_time,
+    trajectory_msgs::msg::JointTrajectory &joint_trajectory, moveit_msgs::msg::MoveItErrorCodes &error_code,
     bool check_self_collision)
 {
   RCLCPP_DEBUG(getLogger(), "Generate joint trajectory from a Cartesian trajectory.");
 
-  const moveit::core::RobotModelConstPtr& robot_model = scene->getRobotModel();
+  const moveit::core::RobotModelConstPtr &robot_model = scene->getRobotModel();
   rclcpp::Clock clock;
   rclcpp::Time generation_begin = clock.now();
 
   // generate the time samples
-  const double epsilon = 10e-06;  // avoid adding the last time sample twice
+  const double epsilon = 10e-06; // avoid adding the last time sample twice
   std::vector<double> time_samples;
   for (double t_sample = 0.0; t_sample < trajectory.Duration() - epsilon; t_sample += sampling_time)
   {
@@ -229,7 +230,7 @@ bool pilz_industrial_motion_planner::generateJointTrajectory(
   Eigen::Isometry3d pose_sample;
   std::map<std::string, double> ik_solution_last, ik_solution, joint_velocity_last;
   ik_solution_last = initial_joint_position;
-  for (const auto& item : ik_solution_last)
+  for (const auto &item : ik_solution_last)
   {
     joint_velocity_last[item.first] = 0.0;
   }
@@ -278,13 +279,13 @@ bool pilz_industrial_motion_planner::generateJointTrajectory(
 
     // set joint names
     joint_trajectory.joint_names.clear();
-    for (const auto& start_joint : initial_joint_position)
+    for (const auto &start_joint : initial_joint_position)
     {
       joint_trajectory.joint_names.push_back(start_joint.first);
     }
 
     point.time_from_start = rclcpp::Duration::from_seconds(*time_iter);
-    for (const auto& joint_name : joint_trajectory.joint_names)
+    for (const auto &joint_name : joint_trajectory.joint_names)
     {
       point.positions.push_back(ik_solution.at(joint_name));
 
@@ -320,17 +321,17 @@ bool pilz_industrial_motion_planner::generateJointTrajectory(
 }
 
 bool pilz_industrial_motion_planner::generateJointTrajectory(
-    const planning_scene::PlanningSceneConstPtr& scene,
-    const pilz_industrial_motion_planner::JointLimitsContainer& joint_limits,
-    const pilz_industrial_motion_planner::CartesianTrajectory& trajectory, const std::string& group_name,
-    const std::string& link_name, const std::map<std::string, double>& initial_joint_position,
-    const std::map<std::string, double>& initial_joint_velocity,
-    trajectory_msgs::msg::JointTrajectory& joint_trajectory, moveit_msgs::msg::MoveItErrorCodes& error_code,
+    const planning_scene::PlanningSceneConstPtr &scene,
+    const pilz_industrial_motion_planner::JointLimitsContainer &joint_limits,
+    const pilz_industrial_motion_planner::CartesianTrajectory &trajectory, const std::string &group_name,
+    const std::string &link_name, const std::map<std::string, double> &initial_joint_position,
+    const std::map<std::string, double> &initial_joint_velocity,
+    trajectory_msgs::msg::JointTrajectory &joint_trajectory, moveit_msgs::msg::MoveItErrorCodes &error_code,
     bool check_self_collision)
 {
   RCLCPP_DEBUG(getLogger(), "Generate joint trajectory from a Cartesian trajectory.");
 
-  const moveit::core::RobotModelConstPtr& robot_model = scene->getRobotModel();
+  const moveit::core::RobotModelConstPtr &robot_model = scene->getRobotModel();
   rclcpp::Clock clock;
   rclcpp::Time generation_begin = clock.now();
 
@@ -339,7 +340,7 @@ bool pilz_industrial_motion_planner::generateJointTrajectory(
   double duration_last = 0;
   double duration_current = 0;
   joint_trajectory.joint_names.clear();
-  for (const auto& joint_position : ik_solution_last)
+  for (const auto &joint_position : ik_solution_last)
   {
     joint_trajectory.joint_names.push_back(joint_position.first);
   }
@@ -389,7 +390,7 @@ bool pilz_industrial_motion_planner::generateJointTrajectory(
     // compute the waypoint
     trajectory_msgs::msg::JointTrajectoryPoint waypoint_joint;
     waypoint_joint.time_from_start = trajectory.points.at(i).time_from_start;
-    for (const auto& joint_name : joint_trajectory.joint_names)
+    for (const auto &joint_name : joint_trajectory.joint_names)
     {
       waypoint_joint.positions.push_back(ik_solution.at(joint_name));
       double joint_velocity = (ik_solution.at(joint_name) - ik_solution_last.at(joint_name)) / duration_current;
@@ -417,8 +418,8 @@ bool pilz_industrial_motion_planner::generateJointTrajectory(
 }
 
 bool pilz_industrial_motion_planner::determineAndCheckSamplingTime(
-    const robot_trajectory::RobotTrajectoryPtr& first_trajectory,
-    const robot_trajectory::RobotTrajectoryPtr& second_trajectory, double epsilon, double& sampling_time)
+    const robot_trajectory::RobotTrajectoryPtr &first_trajectory,
+    const robot_trajectory::RobotTrajectoryPtr &second_trajectory, double epsilon, double &sampling_time)
 {
   // The last sample is ignored because it is allowed to violate the sampling
   // time.
@@ -467,72 +468,109 @@ bool pilz_industrial_motion_planner::determineAndCheckSamplingTime(
   return true;
 }
 
-bool pilz_industrial_motion_planner::isRobotStateEqual(const moveit::core::RobotState& state1,
-                                                       const moveit::core::RobotState& state2,
-                                                       const std::string& joint_group_name, double epsilon)
+bool pilz_industrial_motion_planner::isRobotStateEqual(const moveit::core::RobotState &state1,
+                                                       const moveit::core::RobotState &state2,
+                                                       const std::string &joint_group_name, double epsilon)
 {
-  Eigen::VectorXd joint_position_1, joint_position_2;
+  return isRobotStateEqual(state1, state2, joint_group_name, epsilon,
+                           kin_quant_map_bits_t::POSITION |
+                               kin_quant_map_bits_t::VELOCITY |
+                               kin_quant_map_bits_t::ACCELERATION);
+}
 
-  state1.copyJointGroupPositions(joint_group_name, joint_position_1);
-  state2.copyJointGroupPositions(joint_group_name, joint_position_2);
-
-  if ((joint_position_1 - joint_position_2).norm() > epsilon)
+bool pilz_industrial_motion_planner::isRobotStateEqual(const moveit::core::RobotState &state1,
+                                                       const moveit::core::RobotState &state2,
+                                                       const std::string &joint_group_name, double epsilon,
+                                                       const kin_quant_map_bits_t::quantity quantities_map)
+{
+  if (quantities_map & kin_quant_map_bits_t::POSITION)
   {
-    RCLCPP_DEBUG_STREAM(getLogger(), "Joint positions of the two states are different. state1: "
-                                         << joint_position_1 << " state2: " << joint_position_2);
-    return false;
+    Eigen::VectorXd joint_position_1, joint_position_2;
+
+    state1.copyJointGroupPositions(joint_group_name, joint_position_1);
+    state2.copyJointGroupPositions(joint_group_name, joint_position_2);
+
+    if ((joint_position_1 - joint_position_2).norm() > epsilon)
+    {
+      RCLCPP_DEBUG_STREAM(getLogger(), "Joint positions of the two states are different. state1: "
+                                           << joint_position_1 << " state2: " << joint_position_2);
+      return false;
+    }
   }
-
-  Eigen::VectorXd joint_velocity_1, joint_velocity_2;
-
-  state1.copyJointGroupVelocities(joint_group_name, joint_velocity_1);
-  state2.copyJointGroupVelocities(joint_group_name, joint_velocity_2);
-
-  if ((joint_velocity_1 - joint_velocity_2).norm() > epsilon)
+  if (quantities_map & kin_quant_map_bits_t::VELOCITY)
   {
-    RCLCPP_DEBUG_STREAM(getLogger(), "Joint velocities of the two states are different. state1: "
-                                         << joint_velocity_1 << " state2: " << joint_velocity_2);
-    return false;
+    Eigen::VectorXd joint_velocity_1, joint_velocity_2;
+
+    state1.copyJointGroupVelocities(joint_group_name, joint_velocity_1);
+    state2.copyJointGroupVelocities(joint_group_name, joint_velocity_2);
+
+    if ((joint_velocity_1 - joint_velocity_2).norm() > epsilon)
+    {
+      RCLCPP_DEBUG_STREAM(getLogger(), "Joint velocities of the two states are different. state1: "
+                                           << joint_velocity_1 << " state2: " << joint_velocity_2);
+      return false;
+    }
   }
-
-  Eigen::VectorXd joint_acc_1, joint_acc_2;
-
-  state1.copyJointGroupAccelerations(joint_group_name, joint_acc_1);
-  state2.copyJointGroupAccelerations(joint_group_name, joint_acc_2);
-
-  if ((joint_acc_1 - joint_acc_2).norm() > epsilon)
+  if (quantities_map & kin_quant_map_bits_t::ACCELERATION)
   {
-    RCLCPP_DEBUG_STREAM(getLogger(), "Joint accelerations of the two states are different. state1: "
-                                         << joint_acc_1 << " state2: " << joint_acc_2);
-    return false;
-  }
+    Eigen::VectorXd joint_acc_1, joint_acc_2;
 
+    state1.copyJointGroupAccelerations(joint_group_name, joint_acc_1);
+    state2.copyJointGroupAccelerations(joint_group_name, joint_acc_2);
+
+    if ((joint_acc_1 - joint_acc_2).norm() > epsilon)
+    {
+      RCLCPP_DEBUG_STREAM(getLogger(), "Joint accelerations of the two states are different. state1: "
+                                           << joint_acc_1 << " state2: " << joint_acc_2);
+      return false;
+    }
+  }
   return true;
 }
 
-bool pilz_industrial_motion_planner::isRobotStateStationary(const moveit::core::RobotState& state,
-                                                            const std::string& group, double EPSILON)
+bool pilz_industrial_motion_planner::isRobotStateStationary(const moveit::core::RobotState &state,
+                                                            const std::string &group, double EPSILON)
+{
+  return isRobotStateStationary(state, group, EPSILON, kin_quant_map_bits_t::VELOCITY | kin_quant_map_bits_t::ACCELERATION);
+}
+
+bool pilz_industrial_motion_planner::isRobotStateStationary(const moveit::core::RobotState &state,
+                                                            const std::string &group, double EPSILON,
+                                                            const kin_quant_map_bits_t quantities_map)
 {
   Eigen::VectorXd joint_variable;
-  state.copyJointGroupVelocities(group, joint_variable);
-  if (joint_variable.norm() > EPSILON)
+  if (quantities_map & kin_quant_map_bits_t::VELOCITY)
   {
-    RCLCPP_DEBUG(getLogger(), "Joint velocities are not zero.");
-    return false;
+    state.copyJointGroupVelocities(group, joint_variable);
+    if (joint_variable.norm() > EPSILON)
+    {
+      RCLCPP_DEBUG(getLogger(), "Joint velocities are not zero.");
+      return false;
+    }
   }
-  state.copyJointGroupAccelerations(group, joint_variable);
-  if (joint_variable.norm() > EPSILON)
+  if (quantities_map & kin_quant_map_bits_t::ACCELERATION)
   {
-    RCLCPP_DEBUG(getLogger(), "Joint accelerations are not zero.");
-    return false;
+    state.copyJointGroupAccelerations(group, joint_variable);
+    if (joint_variable.norm() > EPSILON)
+    {
+      RCLCPP_DEBUG(getLogger(), "Joint accelerations are not zero.");
+      return false;
+    }
   }
+
   return true;
 }
 
-bool pilz_industrial_motion_planner::linearSearchIntersectionPoint(const std::string& link_name,
-                                                                   const Eigen::Vector3d& center_position, double r,
-                                                                   const robot_trajectory::RobotTrajectoryPtr& traj,
-                                                                   bool inverseOrder, std::size_t& index)
+bool pilz_industrial_motion_planner::isRobotStateStationary(const moveit::core::RobotState &state,
+                                                            const std::string &group, double EPSILON)
+{
+  return isRobotStateStationary(state, group, EPSILON, VELOCITY_BIT | ACCELERATION_BIT);
+}
+
+bool pilz_industrial_motion_planner::linearSearchIntersectionPoint(const std::string &link_name,
+                                                                   const Eigen::Vector3d &center_position, double r,
+                                                                   const robot_trajectory::RobotTrajectoryPtr &traj,
+                                                                   bool inverseOrder, std::size_t &index)
 {
   RCLCPP_DEBUG(getLogger(), "Start linear search for intersection point.");
 
@@ -566,17 +604,17 @@ bool pilz_industrial_motion_planner::linearSearchIntersectionPoint(const std::st
   return false;
 }
 
-bool pilz_industrial_motion_planner::intersectionFound(const Eigen::Vector3d& p_center,
-                                                       const Eigen::Vector3d& p_current, const Eigen::Vector3d& p_next,
+bool pilz_industrial_motion_planner::intersectionFound(const Eigen::Vector3d &p_center,
+                                                       const Eigen::Vector3d &p_current, const Eigen::Vector3d &p_next,
                                                        double r)
 {
   return ((p_current - p_center).norm() <= r) && ((p_next - p_center).norm() >= r);
 }
 
-bool pilz_industrial_motion_planner::isStateColliding(const planning_scene::PlanningSceneConstPtr& scene,
-                                                      moveit::core::RobotState* rstate,
-                                                      const moveit::core::JointModelGroup* const group,
-                                                      const double* const ik_solution)
+bool pilz_industrial_motion_planner::isStateColliding(const planning_scene::PlanningSceneConstPtr &scene,
+                                                      moveit::core::RobotState *rstate,
+                                                      const moveit::core::JointModelGroup *const group,
+                                                      const double *const ik_solution)
 {
   rstate->setJointGroupPositions(group, ik_solution);
   rstate->update();
@@ -588,16 +626,16 @@ bool pilz_industrial_motion_planner::isStateColliding(const planning_scene::Plan
   return !collision_res.collision;
 }
 
-void normalizeQuaternion(geometry_msgs::msg::Quaternion& quat)
+void normalizeQuaternion(geometry_msgs::msg::Quaternion &quat)
 {
   tf2::Quaternion q;
   tf2::fromMsg(quat, q);
   quat = tf2::toMsg(q.normalized());
 }
 
-Eigen::Isometry3d getConstraintPose(const geometry_msgs::msg::Point& position,
-                                    const geometry_msgs::msg::Quaternion& orientation,
-                                    const geometry_msgs::msg::Vector3& offset)
+Eigen::Isometry3d getConstraintPose(const geometry_msgs::msg::Point &position,
+                                    const geometry_msgs::msg::Quaternion &orientation,
+                                    const geometry_msgs::msg::Vector3 &offset)
 {
   Eigen::Quaterniond quat;
   tf2::fromMsg(orientation, quat);
@@ -612,7 +650,7 @@ Eigen::Isometry3d getConstraintPose(const geometry_msgs::msg::Point& position,
   return pose;
 }
 
-Eigen::Isometry3d getConstraintPose(const moveit_msgs::msg::Constraints& goal)
+Eigen::Isometry3d getConstraintPose(const moveit_msgs::msg::Constraints &goal)
 {
   return getConstraintPose(goal.position_constraints.front().constraint_region.primitive_poses.front().position,
                            goal.orientation_constraints.front().orientation,

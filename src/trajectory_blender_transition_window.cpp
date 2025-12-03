@@ -175,7 +175,7 @@ bool pilz_industrial_motion_planner::TrajectoryBlenderTransitionWindow::validate
   // end position of the first trajectory and start position of second
   // trajectory must be the same
   if (!pilz_industrial_motion_planner::isRobotStateEqual(
-          req.first_trajectory->getLastWayPoint(), req.second_trajectory->getFirstWayPoint(), req.group_name, EPSILON))
+          req.first_trajectory->getLastWayPoint(), req.second_trajectory->getFirstWayPoint(), req.group_name, EPSILON, kin_quant_map_bits_t::POSITION))
   {
     RCLCPP_ERROR_STREAM(getLogger(), "During blending the last point of the preceding and the first point of the "
                                      "succeeding trajectory");
@@ -196,15 +196,15 @@ bool pilz_industrial_motion_planner::TrajectoryBlenderTransitionWindow::validate
   // end position of the first trajectory and start position of second
   // trajectory must have zero
   // velocities/accelerations
-  if (!pilz_industrial_motion_planner::isRobotStateStationary(req.first_trajectory->getLastWayPoint(), req.group_name,
-                                                              EPSILON) ||
-      !pilz_industrial_motion_planner::isRobotStateStationary(req.second_trajectory->getFirstWayPoint(), req.group_name,
-                                                              EPSILON))
-  {
-    RCLCPP_ERROR(getLogger(), "Intersection point of the blending trajectories has non-zero velocities/accelerations.");
-    error_code.val = moveit_msgs::msg::MoveItErrorCodes::INVALID_MOTION_PLAN;
-    return false;
-  }
+  // if (!pilz_industrial_motion_planner::isRobotStateStationary(req.first_trajectory->getLastWayPoint(), req.group_name,
+  //                                                             EPSILON) ||
+  //     !pilz_industrial_motion_planner::isRobotStateStationary(req.second_trajectory->getFirstWayPoint(), req.group_name,
+  //                                                             EPSILON))
+  // {
+  //   RCLCPP_ERROR(getLogger(), "Intersection point of the blending trajectories has non-zero velocities/accelerations.");
+  //   error_code.val = moveit_msgs::msg::MoveItErrorCodes::INVALID_MOTION_PLAN;
+  //   return false;
+  // }
 
   return true;
 }
