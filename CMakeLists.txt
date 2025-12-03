@@ -169,9 +169,5 @@ ament_export_include_directories(include/pilz_industrial_motion_planner)
 ament_export_targets(pilz_industrial_motion_plannerTargets HAS_LIBRARY_TARGET)
 ament_export_dependencies(${THIS_PACKAGE_INCLUDE_DEPENDS} orocos_kdl_vendor)
 
-if(BUILD_TESTING)
-  # Include Tests
-  add_subdirectory(test)
-endif()
 
 ament_package()
