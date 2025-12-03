@@ -536,7 +536,7 @@ bool pilz_industrial_motion_planner::isRobotStateStationary(const moveit::core::
 
 bool pilz_industrial_motion_planner::isRobotStateStationary(const moveit::core::RobotState &state,
                                                             const std::string &group, double EPSILON,
-                                                            const kin_quant_map_bits_t quantities_map)
+                                                            const kin_quant_map_bits_t::quantity quantities_map)
 {
   Eigen::VectorXd joint_variable;
   if (quantities_map & kin_quant_map_bits_t::VELOCITY)
@@ -559,12 +559,6 @@ bool pilz_industrial_motion_planner::isRobotStateStationary(const moveit::core::
   }
 
   return true;
-}
-
-bool pilz_industrial_motion_planner::isRobotStateStationary(const moveit::core::RobotState &state,
-                                                            const std::string &group, double EPSILON)
-{
-  return isRobotStateStationary(state, group, EPSILON, VELOCITY_BIT | ACCELERATION_BIT);
 }
 
 bool pilz_industrial_motion_planner::linearSearchIntersectionPoint(const std::string &link_name,
